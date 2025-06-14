@@ -72,4 +72,43 @@ connectionrouter.post(
     }
   }
 );
+
+// accept or reject a connection request
+connectionrouter.post(
+  "/acceptconnectionrequest/:status/:requestId",
+  auth,
+  async (req, res) => {
+    console.log("acceptconnectionrequest Initialized");
+    try {
+      const loggedInUser = req.user;
+      const { status, requestId } = req.params;
+      const allowedstatus = ["accepted", "rejected"];
+      if (!allowedstatus.includes(status)) {
+        return res
+          .status(400)
+          .send("Invalid status. Allowed statuses are: accepted, rejected");
+      }
+      const connectionRequest = await connectionSchema.findOne({
+        fromUserId: requestId,
+        toUserId: loggedInUser._id,
+        status: "interested",
+      });
+      console.log("connectionRequest", connectionRequest);
+      if (!connectionRequest) {
+        return res
+          .status(404)
+          .send("Connection request not found or already processed");
+      }
+      connectionRequest.status = status;
+      const updatedRequest = await connectionRequest.save();
+      res.json({
+        message: `Connection request ${status} successfully`,
+        data: updatedRequest,
+      });
+    } catch (error) {
+      res.status(400).send("ERROR: " + error.message);
+    }
+  }
+);
+
 module.exports = connectionrouter;

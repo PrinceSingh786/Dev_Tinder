@@ -2,58 +2,62 @@ const express = require("express");
 
 const { auth } = require("../Middlewares/auth");
 const User = require("../models/user");
-
+const Connection = require("../models/Connection");
 const userrouter = express.Router();
 
-userrouter.get("/user", async (req, res) => {
-  const name = req.body.name;
+userrouter.get("/user/requests", auth, async (req, res) => {
+  console.log("Fetching user requests");
   try {
-    res.send(await User.findOne({ name: req.body.name }));
-  } catch (err) {
-    res.status(400).send("Error fetching user data");
-  }
-});
-
-userrouter.delete("/user", async (req, res) => {
-  try {
-    await User.findOneAndDelete({});
-    res.send("Deleted successfully");
-  } catch (err) {
-    res.status(400).send("Error bhaiya ji");
-  }
-});
-
-userrouter.get("/feed", async (req, res) => {
-  try {
-    const users = await User.find({});
-    res.send(users);
-  } catch (err) {
-    res.status(400).send("Error fetching feed data");
-  }
-});
-
-userrouter.patch("/user/:_id", async (req, res) => {
-  try {
-    const updatekrlo = ["name", "bio", "email"];
-    const isValidUpdate = Object.keys(req.body).every((key) =>
-      updatekrlo.includes(key)
-    );
-    if (req.body.name === "ramu aka") {
-      throw new Error("Name cannot be ramu aka   chalo bhago !");
+    const loggedInUser = req.user;
+    const userRequests = await Connection.find({
+      toUserId: loggedInUser._id,
+      status: "interested",
+    }).populate("fromUserId", ["name", "bio"]);
+    if (!userRequests || userRequests.length === 0) {
+      return res.status(404).send("No user requests found");
     }
-    if (!isValidUpdate) {
-      return res.status(400).send("Invalid update fields");
-    }
-    const eid = req.params?._id;
-    const data = req.body;
-    const updatedUser = await User.findByIdAndUpdate(eid, data, {
-      new: true, // Return the updated document
-      runValidators: true, // Ensure that the update respects the schema validation
+    res.json({
+      message: "User requests fetched successfully",
+      data: userRequests,
     });
-    res.send("all is ok " + updatedUser);
   } catch (err) {
-    res.status(400).send("Error updating user data: " + err.message);
+    console.error("Error fetching user requests:", err);
+    res.status(500).send("Internal server error");
   }
 });
 
+userrouter.get("/user/connections", auth, async (req, res) => {
+  console.log("Fetching user connections");
+  try {
+    const loggedInUser = req.user;
+    const userConnections = await Connection.find({
+      $or: [
+        { toUserId: loggedInUser._id, status: "accepted" },
+        { fromUserId: loggedInUser._id, status: "accepted" },
+      ],
+    })
+      .populate("fromUserId", ["name", "bio"])
+      .populate("toUserId", ["name", "bio"]);
+
+    if (!userConnections || userConnections.length === 0) {
+      return res.status(404).send("No user connections found");
+    }
+
+    const abc = userConnections.map((x) => {
+      if (x.fromUserId._id.toString() === loggedInUser._id.toString()) {
+        return x.toUserId;
+      } else {
+        return x.fromUserId;
+      }
+    });
+
+    res.json({
+      message: "User connections fetched successfully",
+      data: abc,
+    });
+  } catch (err) {
+    console.error("Error fetching user connections:", err);
+    res.status(500).send("Internal server error");
+  }
+});
 module.exports = userrouter;
