@@ -15,15 +15,15 @@ connectionrouter.post(
       const status = req.params.status;
       const allowedstatus = ["ignored", "interested"];
 
-      if (
-        fromUserId.toString() === toUserId.toString() ||
-        fromUserId === toUserId
-      ) {
-        console.log("You cannot send a connection request to yourself");
-        return res
-          .status(400)
-          .send("You cannot send a connection request to yourself");
-      }
+      // if (
+      //   fromUserId.toString() === toUserId.toString() ||
+      //   fromUserId === toUserId
+      // ) {
+      //   console.log("You cannot send a connection request to yourself");
+      //   return res
+      //     .status(400)
+      //     .send("You cannot send a connection request to yourself");
+      // }
 
       if (!allowedstatus.includes(status)) {
         return res
