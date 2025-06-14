@@ -59,6 +59,8 @@ userSchema.methods.getJWT = async function () {
   return token;
 };
 
+userSchema.index({ name: 1, email: 1 });
+
 userSchema.methods.validatekrobhai = async function (passwordInput) {
   const user = this;
   return await bcrypt.compare(passwordInput, user.password);
