@@ -60,4 +60,35 @@ userrouter.get("/user/connections", auth, async (req, res) => {
     res.status(500).send("Internal server error");
   }
 });
+
+userrouter.get("/feed", auth, async (req, res) => {
+  try {
+    console.log("Fetching user feed");
+    const loggedInUser = req.user;
+    const userConnections = await Connection.find({
+      $or: [{ toUserId: loggedInUser._id }, { fromUserId: loggedInUser._id }],
+    }).select("fromUserId toUserId");
+
+    const hideusers = new Set();
+    userConnections.forEach((x) => {
+      hideusers.add(x.fromUserId);
+      hideusers.add(x.toUserId);
+    });
+    hideusers.add(loggedInUser._id);
+
+    const feeds = await User.find({
+      _id: { $nin: Array.from(hideusers) },
+    }).select("name bio  ");
+    if (!feeds || feeds.length === 0)
+      return res.status(404).send("No feeds available");
+    res.json({
+      message: "User feed fetched successfully",
+      data: feeds,
+    });
+  } catch (err) {
+    console.error("Error fetching feed:", err);
+    res.status(500).send("Internal server error");
+  }
+});
+
 module.exports = userrouter;
