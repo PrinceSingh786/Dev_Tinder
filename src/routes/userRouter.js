@@ -65,6 +65,11 @@ userrouter.get("/feed", auth, async (req, res) => {
   try {
     console.log("Fetching user feed");
     const loggedInUser = req.user;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 4;
+    // Limit to a maximum of 10 per page
+    if (limit > 10) limit = 10;
+    const skip = (page - 1) * limit;
     const userConnections = await Connection.find({
       $or: [{ toUserId: loggedInUser._id }, { fromUserId: loggedInUser._id }],
     }).select("fromUserId toUserId");
@@ -78,7 +83,10 @@ userrouter.get("/feed", auth, async (req, res) => {
 
     const feeds = await User.find({
       _id: { $nin: Array.from(hideusers) },
-    }).select("name bio  ");
+    })
+      .select("name bio  ")
+      .skip(skip)
+      .limit(limit);
     if (!feeds || feeds.length === 0)
       return res.status(404).send("No feeds available");
     res.json({
